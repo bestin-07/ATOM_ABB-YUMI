@@ -1,7 +1,7 @@
 
 # Copyright 2021 by Bestin Antu, SSET.
 # All rights reserved.
-# This file is part of the ATOM - Advanced Tele_operation Method,
+# This file is part of the ATOM -> Advanced Tele-Operation Method,
 # and is released under the "MIT License Agreement". Please see the LICENSE
 # file that should have been included as part of this package.
 
@@ -25,11 +25,11 @@ x,y,z=0,480,0                               # To start origin from left bottom
 UserPrint = Print = 0                       # For Saving Calibration Angle
 xoffset,yoffset,zoffset=0,480,0             # To start origin from left bottom   
 zoffset=zoff=zmem = 0                        
-Xmax=Ymax=Zmax=400                          # Adjust this value for limiting the coordinate workspace for the robot
+Xmax=Ymax=Zmax=650                          # Adjust this value for limiting the coordinate workspace for the robot
 calibrationflag = False
 Orient = 0
 Robot_Position_Flag = False
-grip = 'False'
+grip = False
 
 
 ####################################################################################################
@@ -218,7 +218,7 @@ mp_hands = mp.solutions.hands
 hands = mp_hands.Hands(min_detection_confidence=.5,min_tracking_confidence=.5)
 
 
-#soc()   # Calling SOCKET HANDSHAKE -> Comment this for debugging without LAN
+soc()   # Calling SOCKET HANDSHAKE -> Comment this for debugging without LAN
 
 
 while True:
@@ -234,6 +234,7 @@ while True:
     image = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
     height = image.shape[0]
     width = image.shape[1]
+    GRIP_EN = 0
     if results.multi_hand_landmarks:
         for hand_landmarks in results.multi_hand_landmarks:
             x = (hand_landmarks.landmark[0].x )* width
@@ -256,10 +257,15 @@ while True:
             GRIP_EN_X = (hand_landmarks.landmark[5].x - hand_landmarks.landmark[4].x)*width
             GRIP_EN_Y = (hand_landmarks.landmark[5].y - hand_landmarks.landmark[4].y)*height
             GRIP_EN = math.sqrt(GRIP_EN_X**2+GRIP_EN_Y**2)
-            #print(GRIP_EN)
 
     cv2.circle(image, (int(x),int(y)), 10, (0, 255, 0), 2)
-    #s.send(bytes(message, 'utf-8'))
+
+    if GRIP_EN < 15 and grip == False and calibrationflag == True:
+        s.send(bytes('HI', 'utf-8'))
+        grip = True
+    else:
+        s.send(bytes('HO', 'utf-8'))
+        grip = False
 
 ############################################# CALIBRATION AND RESET ########################################
 
@@ -297,7 +303,8 @@ while True:
         print('Keep your palm facing the screen')
         zz = zmem
 
-    EGM1.send_to_robot(coordinateformatter(x,y,zz),EGM1.receive_from_robot()[1])
+    if calibrationflag == True:
+        EGM1.send_to_robot(coordinateformatter(x,y,zz),EGM1.receive_from_robot()[1])
 
     cv2.imshow('MediaPipe Hands', image)
     if cv2.waitKey(5) & 0xFF == 27:
