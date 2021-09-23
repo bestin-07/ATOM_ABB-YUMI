@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ViewItems xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+  <Cameras>
+    <Camera>
+      <Jobs>
+        <Job>
+          <JobData>
+            <DataItem Index="33" IsLabel="false">
+              <Text>Cam_R</Text>
+              <VariableName>RAPID/T_ROB_R/ppaBase/RestartActive</VariableName>
+            </DataItem>
+          </JobData>
+        </Job>
+        <Job Name="Default">
+          <JobData />
+        </Job>
+      </Jobs>
+    </Camera>
+    <Camera>
+      <Jobs>
+        <Job>
+          <JobData>
+            <DataItem Index="33" IsLabel="false">
+              <Text>Cam_R</Text>
+              <VariableName>RAPID/T_ROB_R/ppaBase/RestartActive</VariableName>
+            </DataItem>
+          </JobData>
+        </Job>
+        <Job Name="Default">
+          <JobData />
+        </Job>
+      </Jobs>
+    </Camera>
+  </Cameras>
+</ViewItems>
