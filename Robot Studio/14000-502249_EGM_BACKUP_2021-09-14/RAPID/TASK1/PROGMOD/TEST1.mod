@@ -10,9 +10,9 @@ MODULE TEST1
 
     TRAP UpdateCorr
         Incr correctioncount;
-        IF String_Commn="HI" THEN
+        IF String_Commn="In" THEN
             g_GripIn\holdForce:=10;
-        ELSEIF  String_Commn="HO" THEN
+        ELSEIF  String_Commn="Out" THEN
             G_JOGOUT;
         ELSE
             RETURN;

@@ -21,16 +21,17 @@ s = socket.socket()                         # Create a socket object
 
 ######################################### CONFIGURATION ############################################
 
-x,y,z=0,480,0                               # To start origin from left bottom
+x,y,z=0,0,0                               # To start origin from left bottom
 UserPrint = Print = 0                       # For Saving Calibration Angle
-xoffset,yoffset,zoffset=0,480,0             # To start origin from left bottom   
+xoffset,yoffset,zoffset=0,0,0             # To start origin from left bottom   
 zoffset=zoff=zmem = 0                        
 Xmax=Ymax=Zmax=650                          # Adjust this value for limiting the coordinate workspace for the robot
 calibrationflag = False
 Orient = 0
 Robot_Position_Flag = False
 grip = False
-
+Stabilizer = [[],[],[]]
+xavg=yavg=zavg=0
 
 ####################################################################################################
 
@@ -57,7 +58,7 @@ import egm_pb2
 import select
 import numpy as np
 
-
+# Defines an egm object and connect with the server of the robot studio.
 
 class EGM(object):
 
@@ -125,10 +126,11 @@ class EGM(object):
 
         planned=sensorMessage.planned
 
+# The values to write to the robot
         if Rob_pos is not None:
             planned.cartesian.pos.x = Rob_pos.x + pos[2]
             planned.cartesian.pos.y = Rob_pos.y + pos[0]
-            planned.cartesian.pos.z = Rob_pos.z + pos[1]
+            planned.cartesian.pos.z = Rob_pos.z - pos[1]
             planned.cartesian.euler.x=-Orient-20
             planned.cartesian.euler.y=180
             planned.cartesian.euler.z=0
@@ -162,14 +164,32 @@ def zcalculator(zoff,zoffset):
 
 def coordinateformatter(x_x,y_y,z_z):
 
+    def Average(lst):
+        return sum(lst) / len(lst)
+
+    xavg=yavg=zavg=0
     x_ = (x_x-xoffset)*(Xmax/640)
-    y_ = (yoffset-y_y)*(Ymax/480)
+    y_ = (y_y-yoffset)*(Ymax/480)
     z_ = z_z*(Zmax/1000)
+
+# Stabilizing the detected coordinates to smoothen out robot movement. This improves life of our robot.
+
+    Stabilizer[0].append(x_)
+    Stabilizer[1].append(y_)
+    Stabilizer[2].append(z_)
+    if len(Stabilizer[0])>10:
+        Stabilizer[0].pop(0)
+        Stabilizer[1].pop(0)
+        Stabilizer[2].pop(0)
+        xavg = Average(Stabilizer[0])
+        yavg = Average(Stabilizer[1])
+        zavg = Average(Stabilizer[2])
+        print('avg',zavg)
 
 
     if int(z_)<0:
         z_ = 0
-    return(x_,y_,z_)
+    return(xavg,yavg,zavg)
 
 bounding_box = {'top': 300, 'left': 500, 'width': 1140, 'height': 780}
 sct = mss()
@@ -182,28 +202,21 @@ def triarea(x,y,x1,y1,x2,y2):
     area = abs((x*(y1-y2))+(x1*(y2-y))+(x2*(y-y1)))/2
     base = math.sqrt(((x2-x1)**2)+((y2-y1)**2))
     
-    '''k = ((y2-y1) * (x-x1) - (x2-x1) * (y-y1)) / ((y2-y1)**2 + (x2-x1)**2)
-    x3 = int(x - k * (y2-y1))
-    y3 = int(y + k * (x2-x1))
-    opposite = math.sqrt(((x1-x3)**2)+((y1-y3)**2))
-    adjacent = 2*area/base
-
-    define_angle = int(math.degrees(math.atan2(adjacent,opposite)))
-    return define_angle'''
 
     m1 = (y2-y1)/(x2-x1)
     m2 = (y1-y)/(x1-x)
     define_angle = math.degrees(math.atan((m2-m1)/(1+(m1*m2))))
     return define_angle
-    #Coutersy of Sharath Sajan'''
+
 
 
 def grab():                             # FUNCTION FOR INPUT AS SCREEN
     sct_img = sct.grab(bounding_box)
     image = np.array(sct_img) 
-    #cv2.imshow('screen', np.array(sct_img))    # Debug Purpose
+    #cv2.imshow('screen', np.array(sct_img))    # Debug Purpose - I dont have a verbose :-(
     return image
-        
+
+# Above function can be used for remote operations eg. Via teams or gmeet.
 
 def cam():                              # FUNCTION FOR INPUT AS CAM
     success, image = cap.read()
@@ -261,10 +274,8 @@ while True:
     cv2.circle(image, (int(x),int(y)), 10, (0, 255, 0), 2)
 
     if GRIP_EN < 15 and grip == False and calibrationflag == True:
-        s.send(bytes('HI', 'utf-8'))
         grip = True
     else:
-        s.send(bytes('HO', 'utf-8'))
         grip = False
 
 ############################################# CALIBRATION AND RESET ########################################
@@ -274,8 +285,8 @@ while True:
         cv2.imshow('MediaPipe Hands', image)
         print("CALLIBRATING")
         calibrationflag = True
-        xoffset = x
-        yoffset = y
+        xoffset = Tst[0]
+        yoffset = Tst[1]
         zoffset = zoff
         UserPrint = Print
         time.sleep(1)
@@ -288,7 +299,7 @@ while True:
         calibrationflag = False
         x = y = z = 0
         xoffset = 0
-        yoffset = 480
+        yoffset = 0
         zoffset= zoff = 0
         UserPrint = 0
         time.sleep(1)
@@ -302,6 +313,8 @@ while True:
     else:
         print('Keep your palm facing the screen')
         zz = zmem
+
+    Tst = coordinateformatter(x,y,zz)
 
     if calibrationflag == True:
         EGM1.send_to_robot(coordinateformatter(x,y,zz),EGM1.receive_from_robot()[1])

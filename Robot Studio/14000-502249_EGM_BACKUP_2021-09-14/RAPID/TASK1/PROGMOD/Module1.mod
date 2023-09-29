@@ -163,26 +163,4 @@ MODULE Module1
     ENDPROC
 
 
-
-    PROC MATLAB_COMM()
-        continues:
-        SocketReceive CLIENT\RAWDATA:=DATA;
-        SocketReceive CLIENT\RAWDATA:=DATA;
-        UnpackRawBytes DATA,1,MESSAGE\ASCII:=15;
-        received_string:=MESSAGE;
-        TPWrite "Data received : "+received_string;
-        String_Commn:=received_String;
-        SocketSend CLIENT\Str:="Socket Received";
-        !TPWrite "client wrote" + DATA;
-        GOTO continues;
-    ERROR
-        IF ERRNO=ERR_SOCK_CLOSED THEN
-            RETURN ;
-        ENDIF
-    ENDPROC
-
-
-    PROC Routine1()
-        <SMT>
-    ENDPROC
 ENDMODULE
